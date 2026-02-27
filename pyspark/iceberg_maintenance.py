@@ -4,13 +4,17 @@ Iceberg Table Maintenance — PySpark Job
 Performs maintenance operations on an Iceberg table stored in S3.
 
 Operations (when --maintenance-type=all, executed in order):
-  1. rewrite_data_files  – compact small files within the target dt partition
+  1. rewrite_data_files  – compact small files within the target partition
   2. expire_snapshots    – remove snapshots older than retention threshold
   3. remove_orphan_files – delete S3 files not referenced by any snapshot
   4. rewrite_manifests   – rewrite manifest files for faster planning
 
-The dt partition value and table identifiers are injected via CLI arguments
-by IcebergMaintenanceOperator when it submits the SparkApplication CRD.
+The partition column name (--partition-col) and formatted partition value
+(--partition-value) are injected by IcebergMaintenanceOperator.
+
+Supported partition value formats (resolved by the operator before submission):
+  yyyy-mm-dd  e.g. 2024-03-08
+  yyyymmdd    e.g. 20240308
 
 Spark version : 4.1.1
 """
@@ -37,10 +41,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--database", required=True, help="Iceberg database/schema")
     parser.add_argument("--table", required=True, help="Iceberg table name")
     parser.add_argument(
-        "--dt-partition",
+        "--partition-col",
+        dest="partition_col",
+        default="dt",
+        help="Partition column name in the Iceberg table (e.g. dt, date_key)",
+    )
+    parser.add_argument(
+        "--partition-value",
         required=True,
-        dest="dt_partition",
-        help="Target dt partition value (YYYY-MM-DD)",
+        dest="partition_value",
+        help="Formatted partition value (e.g. 2024-03-08 or 20240308)",
     )
     parser.add_argument(
         "--maintenance-type",
@@ -93,19 +103,30 @@ def rewrite_data_files(
     spark: SparkSession,
     full_table: str,
     catalog: str,
-    dt_partition: str,
+    partition_col: str,
+    partition_value: str,
 ) -> None:
-    """Compact small data files within the target dt partition.
+    """Compact small data files within the target partition.
 
     Uses Iceberg's ``rewrite_data_files`` stored procedure with a partition
-    filter to limit work to the requested ``dt`` value.
+    filter to limit work to the requested partition value.
+
+    Parameters
+    ----------
+    partition_col:
+        Name of the partition column (e.g. ``"dt"``, ``"date_key"``).
+    partition_value:
+        Formatted partition value (e.g. ``"2024-03-08"`` or ``"20240308"``).
     """
-    print(f"[rewrite_data_files] Compacting dt='{dt_partition}' in {full_table}")
+    print(
+        f"[rewrite_data_files] Compacting {partition_col}='{partition_value}'"
+        f" in {full_table}"
+    )
     result = spark.sql(
         f"""
         CALL {catalog}.system.rewrite_data_files(
             table  => '{full_table}',
-            where  => 'dt = \\'{dt_partition}\\'',
+            where  => '{partition_col} = \\'{partition_value}\\'',
             options => map(
                 'target-file-size-bytes', '134217728',
                 'min-input-files',        '2'
@@ -211,14 +232,16 @@ def main(argv: list[str] | None = None) -> None:
     catalog = args.catalog
     database = args.database
     table = args.table
-    dt_partition = args.dt_partition
+    partition_col = args.partition_col
+    partition_value = args.partition_value
     maintenance_type = args.maintenance_type
     full_table = f"{catalog}.{database}.{table}"
 
     print("=" * 60)
     print("Iceberg Maintenance Job")
     print(f"  table           : {full_table}")
-    print(f"  dt_partition    : {dt_partition}")
+    print(f"  partition_col   : {partition_col}")
+    print(f"  partition_value : {partition_value}")
     print(f"  maintenance_type: {maintenance_type}")
     print("=" * 60)
 
@@ -228,7 +251,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         # ---- 1. Compact the target partition first ----
         if maintenance_type in ("all", "rewrite_data_files"):
-            rewrite_data_files(spark, full_table, catalog, dt_partition)
+            rewrite_data_files(spark, full_table, catalog, partition_col, partition_value)
 
         # ---- 2. Expire old snapshots ----
         if maintenance_type in ("all", "expire_snapshots"):

@@ -6,8 +6,13 @@ Custom Airflow operator for managing Iceberg tables on S3.
 Inherits from SparkKubernetesOperator to submit PySpark maintenance jobs via the
 Kubeflow Spark Operator (sparkoperator.k8s.io/v1beta2) running on Kubernetes.
 
-The dt partition to maintain is resolved at execution time:
-    dt = data_interval_start - timedelta(days=days_back)
+The partition to maintain is resolved at execution time:
+    partition_value = (data_interval_start - timedelta(days=days_back))
+                      .strftime(<format>)
+
+Supported partition formats:
+    "yyyy-mm-dd"  →  2024-03-08   (strftime: %Y-%m-%d)
+    "yyyymmdd"    →  20240308     (strftime: %Y%m%d)
 
 Airflow version : 3.0.6
 Spark version   : 4.1.1
@@ -48,7 +53,15 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
         Name of the Iceberg table to maintain.
     days_back : int
         Number of days to subtract from ``data_interval_start`` when
-        computing the ``dt`` partition. Default is ``0`` (current interval).
+        computing the partition value. Default is ``0`` (current interval).
+    partition_col : str
+        Name of the partition column in the Iceberg table. Default ``"dt"``.
+        Used in the ``WHERE`` clause of ``rewrite_data_files``.
+    partition_format : str
+        Format of the partition value. Accepted values:
+
+        * ``"yyyy-mm-dd"`` – e.g. ``2024-03-08``  (default)
+        * ``"yyyymmdd"``   – e.g. ``20240308``
     maintenance_type : str
         Type of maintenance to perform. Accepted values:
 
@@ -82,6 +95,12 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
         (e.g. ``namespace``, ``kubernetes_conn_id``, ``api_group``, ``api_version``).
     """
 
+    # Maps user-facing format names to Python strftime format strings.
+    PARTITION_FORMAT_MAP: dict[str, str] = {
+        "yyyy-mm-dd": "%Y-%m-%d",
+        "yyyymmdd": "%Y%m%d",
+    }
+
     # Extend parent template_fields so Jinja2 works on these attributes too.
     template_fields: Sequence[str] = (
         *SparkKubernetesOperator.template_fields,
@@ -89,6 +108,8 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
         "table_database",
         "table_name",
         "days_back",
+        "partition_col",
+        "partition_format",
         "maintenance_type",
         "spark_image",
     )
@@ -110,6 +131,8 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
         table_database: str,
         table_name: str,
         days_back: int = 0,
+        partition_col: str = "dt",
+        partition_format: str = "yyyy-mm-dd",
         maintenance_type: str = "all",
         spark_image: str,
         spark_main_file: str,
@@ -127,11 +150,18 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
                 f"Invalid maintenance_type '{maintenance_type}'. "
                 f"Must be one of: {sorted(self.VALID_MAINTENANCE_TYPES)}"
             )
+        if partition_format not in self.PARTITION_FORMAT_MAP:
+            raise ValueError(
+                f"Invalid partition_format '{partition_format}'. "
+                f"Must be one of: {list(self.PARTITION_FORMAT_MAP)}"
+            )
 
         self.table_catalog = table_catalog
         self.table_database = table_database
         self.table_name = table_name
         self.days_back = days_back
+        self.partition_col = partition_col
+        self.partition_format = partition_format
         self.maintenance_type = maintenance_type
         self.spark_image = spark_image
         self.spark_main_file = spark_main_file
@@ -163,7 +193,7 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
         value = re.sub(r"[^a-z0-9-]", "", value)
         return value.strip("-")[:max_len]
 
-    def _build_spark_application(self, dt_partition: str) -> str:
+    def _build_spark_application(self, partition_value: str) -> str:
         """Build a ``SparkApplication`` YAML manifest string.
 
         The generated manifest is compatible with
@@ -171,9 +201,9 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
 
         Parameters
         ----------
-        dt_partition:
-            The ``dt`` partition value (``YYYY-MM-DD``) to pass as an
-            argument to the PySpark job.
+        partition_value:
+            The formatted partition value (e.g. ``"2024-03-08"`` or ``"20240308"``)
+            to pass as an argument to the PySpark job.
 
         Returns
         -------
@@ -181,9 +211,10 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
             YAML string representing the ``SparkApplication`` resource.
         """
         safe_table = self._k8s_safe_name(self.table_name)
-        safe_dt = dt_partition.replace("-", "")
+        # Normalize partition value for use in K8s resource name (digits only)
+        safe_partition = re.sub(r"[^a-z0-9]", "", partition_value.lower())
         # Full name ≤ 63 chars (K8s label value / pod name constraint)
-        app_name = f"iceberg-maint-{safe_table}-{safe_dt}"[:63].rstrip("-")
+        app_name = f"iceberg-maint-{safe_table}-{safe_partition}"[:63].rstrip("-")
 
         # Base Spark config: enable Iceberg extensions
         spark_conf: dict[str, str] = {
@@ -202,7 +233,8 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
                 "labels": {
                     "app": "iceberg-maintenance",
                     "table": self._k8s_safe_name(self.table_name, max_len=63),
-                    "dt": dt_partition,
+                    "partition-col": self._k8s_safe_name(self.partition_col, max_len=63),
+                    "partition-value": self._k8s_safe_name(partition_value, max_len=63),
                 },
             },
             "spec": {
@@ -217,7 +249,8 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
                     "--catalog", self.table_catalog,
                     "--database", self.table_database,
                     "--table", self.table_name,
-                    "--dt-partition", dt_partition,
+                    "--partition-col", self.partition_col,
+                    "--partition-value", partition_value,
                     "--maintenance-type", self.maintenance_type,
                 ],
                 "sparkConf": spark_conf,
@@ -246,25 +279,28 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
     # ------------------------------------------------------------------
 
     def execute(self, context: Context) -> Any:
-        """Compute the target dt partition, build the SparkApplication manifest,
+        """Compute the target partition value, build the SparkApplication manifest,
         then delegate to :meth:`SparkKubernetesOperator.execute`.
         """
         data_interval_start = context["data_interval_start"]
-        dt_partition = (
+        strftime_fmt = self.PARTITION_FORMAT_MAP[self.partition_format]
+        partition_value = (
             data_interval_start - timedelta(days=int(self.days_back))
-        ).strftime("%Y-%m-%d")
+        ).strftime(strftime_fmt)
 
         self.log.info(
-            "Iceberg maintenance — table: %s.%s.%s | dt: %s | type: %s",
+            "Iceberg maintenance — table: %s.%s.%s | %s=%s (format: %s) | type: %s",
             self.table_catalog,
             self.table_database,
             self.table_name,
-            dt_partition,
+            self.partition_col,
+            partition_value,
+            self.partition_format,
             self.maintenance_type,
         )
 
         # Override application_file with the dynamically generated manifest.
-        self.application_file = self._build_spark_application(dt_partition)
+        self.application_file = self._build_spark_application(partition_value)
         self.log.debug("SparkApplication manifest:\n%s", self.application_file)
 
         return super().execute(context)
