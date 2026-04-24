@@ -11,8 +11,9 @@ The partition to maintain is resolved at execution time:
                       .strftime(<format>)
 
 Supported partition formats:
-    "yyyy-mm-dd"  →  2024-03-08   (strftime: %Y-%m-%d)
-    "yyyymmdd"    →  20240308     (strftime: %Y%m%d)
+    "yyyy-mm-dd"      →  2024-03-08        (strftime: %Y-%m-%d)
+    "yyyymmdd"        →  20240308          (strftime: %Y%m%d)
+    "yyyymmddhhMMss"  →  20240308153045    (strftime: %Y%m%d%H%M%S)
 
 Airflow version : 3.0.6
 Spark version   : 4.1.1
@@ -60,8 +61,9 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
     partition_format : str
         Format of the partition value. Accepted values:
 
-        * ``"yyyy-mm-dd"`` – e.g. ``2024-03-08``  (default)
-        * ``"yyyymmdd"``   – e.g. ``20240308``
+        * ``"yyyy-mm-dd"``     – e.g. ``2024-03-08``      (default)
+        * ``"yyyymmdd"``      – e.g. ``20240308``
+        * ``"yyyymmddhhMMss"``– e.g. ``20240308153045``
     maintenance_type : str
         Type of maintenance to perform. Accepted values:
 
@@ -99,6 +101,7 @@ class IcebergMaintenanceOperator(SparkKubernetesOperator):
     PARTITION_FORMAT_MAP: dict[str, str] = {
         "yyyy-mm-dd": "%Y-%m-%d",
         "yyyymmdd": "%Y%m%d",
+        "yyyymmddhhMMss": "%Y%m%d%H%M%S",
     }
 
     # Extend parent template_fields so Jinja2 works on these attributes too.

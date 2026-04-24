@@ -13,8 +13,9 @@ The partition column name (--partition-col) and formatted partition value
 (--partition-value) are injected by IcebergMaintenanceOperator.
 
 Supported partition value formats (resolved by the operator before submission):
-  yyyy-mm-dd  e.g. 2024-03-08
-  yyyymmdd    e.g. 20240308
+  yyyy-mm-dd      e.g. 2024-03-08
+  yyyymmdd        e.g. 20240308
+  yyyymmddhhMMss  e.g. 20240308153045
 
 Spark version : 4.1.1
 """

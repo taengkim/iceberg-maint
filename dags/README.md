@@ -30,7 +30,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 | `data_interval_start` | Airflow-managed start of the scheduling window |
 | `days_back` | Days to subtract from `data_interval_start` |
 | `partition_col` | Partition column name in the Iceberg table (default: `"dt"`) |
-| `partition_format` | Value format — `"yyyy-mm-dd"` or `"yyyymmdd"` (default: `"yyyy-mm-dd"`) |
+| `partition_format` | Value format — `"yyyy-mm-dd"`, `"yyyymmdd"`, or `"yyyymmddhhMMss"` (default: `"yyyy-mm-dd"`) |
 
 **Example:** DAG interval starts `2024-03-15`, `days_back=7`, `partition_format="yyyy-mm-dd"`
 → maintained partition: `dt='2024-03-08'`
@@ -50,7 +50,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 | `table_name` | `str` | Table name |
 | `days_back` | `int` | Days to subtract from `data_interval_start` (default: `0`) |
 | `partition_col` | `str` | Partition column name (default: `"dt"`) |
-| `partition_format` | `str` | `"yyyy-mm-dd"` or `"yyyymmdd"` (default: `"yyyy-mm-dd"`) |
+| `partition_format` | `str` | `"yyyy-mm-dd"`, `"yyyymmdd"`, or `"yyyymmddhhMMss"` (default: `"yyyy-mm-dd"`) |
 | `maintenance_type` | `str` | `all` / `expire_snapshots` / `remove_orphan_files` / `rewrite_data_files` / `rewrite_manifests` |
 | `spark_image` | `str` | Docker image for Spark driver/executor pods |
 | `spark_main_file` | `str` | S3 or local path to the PySpark script |
@@ -127,7 +127,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 | `data_interval_start` | Airflow가 관리하는 스케줄 윈도우의 시작 시각 |
 | `days_back` | `data_interval_start` 에서 뺄 일수 |
 | `partition_col` | Iceberg 테이블의 파티션 컬럼명 (기본값: `"dt"`) |
-| `partition_format` | 값 포맷 — `"yyyy-mm-dd"` 또는 `"yyyymmdd"` (기본값: `"yyyy-mm-dd"`) |
+| `partition_format` | 값 포맷 — `"yyyy-mm-dd"`, `"yyyymmdd"`, 또는 `"yyyymmddhhMMss"` (기본값: `"yyyy-mm-dd"`) |
 
 **예시:** DAG 인터벌 시작 `2024-03-15`, `days_back=7`, `partition_format="yyyy-mm-dd"`
 → 처리 파티션: `dt='2024-03-08'`
@@ -147,7 +147,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 | `table_name` | `str` | 테이블명 |
 | `days_back` | `int` | `data_interval_start` 기준 몇 일 전 파티션 (기본값: `0`) |
 | `partition_col` | `str` | 파티션 컬럼명 (기본값: `"dt"`) |
-| `partition_format` | `str` | `"yyyy-mm-dd"` 또는 `"yyyymmdd"` (기본값: `"yyyy-mm-dd"`) |
+| `partition_format` | `str` | `"yyyy-mm-dd"`, `"yyyymmdd"`, 또는 `"yyyymmddhhMMss"` (기본값: `"yyyy-mm-dd"`) |
 | `maintenance_type` | `str` | `all` / `expire_snapshots` / `remove_orphan_files` / `rewrite_data_files` / `rewrite_manifests` |
 | `spark_image` | `str` | Spark 드라이버/익스큐터 Pod 이미지 |
 | `spark_main_file` | `str` | PySpark 스크립트의 S3 또는 로컬 경로 |

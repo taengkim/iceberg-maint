@@ -38,7 +38,7 @@ Performs one or more Iceberg maintenance operations against a specific partition
 | `--database` | yes | — | Iceberg database/schema |
 | `--table` | yes | — | Iceberg table name |
 | `--partition-col` | no | `dt` | Partition column name (e.g. `dt`, `date_key`) |
-| `--partition-value` | yes | — | Formatted partition value (e.g. `2024-03-08` or `20240308`) |
+| `--partition-value` | yes | — | Formatted partition value (e.g. `2024-03-08`, `20240308`, or `20240308153045`) |
 | `--maintenance-type` | no | `all` | `all` / `rewrite_data_files` / `expire_snapshots` / `remove_orphan_files` / `rewrite_manifests` |
 | `--snapshot-retention-days` | no | `7` | Expire snapshots older than N days |
 | `--snapshot-retain-last` | no | `5` | Always keep at least N most recent snapshots |
@@ -144,7 +144,7 @@ Kubernetes의 Spark Operator가 실행하는 PySpark 스크립트가 들어 있�
 | `--database` | 예 | — | Iceberg 데이터베이스/스키마 |
 | `--table` | 예 | — | Iceberg 테이블명 |
 | `--partition-col` | 아니오 | `dt` | 파티션 컬럼명 (예: `dt`, `date_key`) |
-| `--partition-value` | 예 | — | 포맷된 파티션 값 (예: `2024-03-08` 또는 `20240308`) |
+| `--partition-value` | 예 | — | 포맷된 파티션 값 (예: `2024-03-08`, `20240308`, 또는 `20240308153045`) |
 | `--maintenance-type` | 아니오 | `all` | `all` / `rewrite_data_files` / `expire_snapshots` / `remove_orphan_files` / `rewrite_manifests` |
 | `--snapshot-retention-days` | 아니오 | `7` | 이 일수보다 오래된 스냅샷 만료 |
 | `--snapshot-retain-last` | 아니오 | `5` | 최소 유지할 최신 스냅샷 수 |

@@ -42,6 +42,7 @@ BaseOperator
 |--------------------|-----------------|---------|
 | `"yyyy-mm-dd"` *(default)* | `%Y-%m-%d` | `2024-03-08` |
 | `"yyyymmdd"` | `%Y%m%d` | `20240308` |
+| `"yyyymmddhhMMss"` | `%Y%m%d%H%M%S` | `20240308153045` |
 
 ### Parameters
 
@@ -52,7 +53,7 @@ BaseOperator
 | `table_name` | `str` | required | Table name |
 | `days_back` | `int` | `0` | Days to subtract from `data_interval_start` |
 | `partition_col` | `str` | `"dt"` | Partition column name in the Iceberg table |
-| `partition_format` | `str` | `"yyyy-mm-dd"` | Partition value format: `"yyyy-mm-dd"` or `"yyyymmdd"` |
+| `partition_format` | `str` | `"yyyy-mm-dd"` | Partition value format: `"yyyy-mm-dd"`, `"yyyymmdd"`, or `"yyyymmddhhMMss"` |
 | `maintenance_type` | `str` | `"all"` | `all` / `expire_snapshots` / `remove_orphan_files` / `rewrite_data_files` / `rewrite_manifests` |
 | `spark_image` | `str` | required | Docker image for Spark pods |
 | `spark_main_file` | `str` | required | S3/local path to the PySpark script |
@@ -136,6 +137,7 @@ BaseOperator
 |--------------------|---------------|------|
 | `"yyyy-mm-dd"` *(기본값)* | `%Y-%m-%d` | `2024-03-08` |
 | `"yyyymmdd"` | `%Y%m%d` | `20240308` |
+| `"yyyymmddhhMMss"` | `%Y%m%d%H%M%S` | `20240308153045` |
 
 ### 파라미터
 
@@ -146,7 +148,7 @@ BaseOperator
 | `table_name` | `str` | 필수 | 테이블명 |
 | `days_back` | `int` | `0` | `data_interval_start` 에서 뺄 일수 |
 | `partition_col` | `str` | `"dt"` | Iceberg 테이블의 파티션 컬럼명 |
-| `partition_format` | `str` | `"yyyy-mm-dd"` | 파티션 값 포맷: `"yyyy-mm-dd"` 또는 `"yyyymmdd"` |
+| `partition_format` | `str` | `"yyyy-mm-dd"` | 파티션 값 포맷: `"yyyy-mm-dd"`, `"yyyymmdd"`, 또는 `"yyyymmddhhMMss"` |
 | `maintenance_type` | `str` | `"all"` | `all` / `expire_snapshots` / `remove_orphan_files` / `rewrite_data_files` / `rewrite_manifests` |
 | `spark_image` | `str` | 필수 | Spark Pod용 Docker 이미지 |
 | `spark_main_file` | `str` | 필수 | PySpark 스크립트의 S3/로컬 경로 |

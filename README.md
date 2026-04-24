@@ -94,6 +94,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 |--------------------|----------------|
 | `"yyyy-mm-dd"` *(default)* | `2024-03-08` |
 | `"yyyymmdd"` | `20240308` |
+| `"yyyymmddhhMMss"` | `20240308153045` |
 
 The partition column name is configured via `partition_col` (default: `"dt"`).
 
@@ -104,6 +105,7 @@ The partition column name is configured via `partition_col` (default: `"dt"`).
 | 2024-03-15 | `0` | `dt` | `yyyy-mm-dd` | `dt='2024-03-15'` |
 | 2024-03-15 | `7` | `dt` | `yyyy-mm-dd` | `dt='2024-03-08'` |
 | 2024-03-15 | `1` | `date_key` | `yyyymmdd` | `date_key='20240314'` |
+| 2024-03-15T15:30:45 | `0` | `ts` | `yyyymmddhhMMss` | `ts='20240315153045'` |
 
 ## Maintenance Operations
 
@@ -159,7 +161,7 @@ IcebergMaintenanceOperator(
     # Partition settings
     days_back=7,                      # Offset from data_interval_start
     partition_col="dt",               # Partition column name (default: "dt")
-    partition_format="yyyy-mm-dd",    # "yyyy-mm-dd" | "yyyymmdd"
+    partition_format="yyyy-mm-dd",    # "yyyy-mm-dd" | "yyyymmdd" | "yyyymmddhhMMss"
 
     # Maintenance type
     maintenance_type="all",           # all | rewrite_data_files | expire_snapshots
@@ -219,8 +221,9 @@ Airflow Scheduler
   │
   └─ IcebergMaintenanceOperator.execute(context)
        │
-       ├─ partition_value = "2024-03-08"  (days_back=7, yyyy-mm-dd)
-       │                 OR "20240308"    (days_back=7, yyyymmdd)
+       ├─ partition_value = "2024-03-08"        (days_back=7, yyyy-mm-dd)
+       │                 OR "20240308"          (days_back=7, yyyymmdd)
+       │                 OR "20240308153045"    (days_back=0, yyyymmddhhMMss)
        │
        ├─ Build SparkApplication YAML
        │    arguments:
@@ -330,6 +333,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 |--------------------|-----------|
 | `"yyyy-mm-dd"` *(기본값)* | `2024-03-08` |
 | `"yyyymmdd"` | `20240308` |
+| `"yyyymmddhhMMss"` | `20240308153045` |
 
 파티션 컬럼명은 `partition_col` 파라미터로 지정합니다 (기본값: `"dt"`).
 
@@ -340,6 +344,7 @@ partition_value = (data_interval_start − timedelta(days=days_back))
 | 2024-03-15 | `0` | `dt` | `yyyy-mm-dd` | `dt='2024-03-15'` |
 | 2024-03-15 | `7` | `dt` | `yyyy-mm-dd` | `dt='2024-03-08'` |
 | 2024-03-15 | `1` | `date_key` | `yyyymmdd` | `date_key='20240314'` |
+| 2024-03-15T15:30:45 | `0` | `ts` | `yyyymmddhhMMss` | `ts='20240315153045'` |
 
 ## 유지보수 작업 종류
 
@@ -395,7 +400,7 @@ IcebergMaintenanceOperator(
     # 파티션 설정
     days_back=7,                      # data_interval_start 기준 몇 일 전 파티션
     partition_col="dt",               # 파티션 컬럼명 (기본값: "dt")
-    partition_format="yyyy-mm-dd",    # "yyyy-mm-dd" | "yyyymmdd"
+    partition_format="yyyy-mm-dd",    # "yyyy-mm-dd" | "yyyymmdd" | "yyyymmddhhMMss"
 
     # 유지보수 작업
     maintenance_type="all",           # all | rewrite_data_files | expire_snapshots
@@ -455,8 +460,9 @@ Airflow Scheduler
   │
   └─ IcebergMaintenanceOperator.execute(context)
        │
-       ├─ partition_value = "2024-03-08"  (days_back=7, yyyy-mm-dd)
-       │                 OR "20240308"    (days_back=7, yyyymmdd)
+       ├─ partition_value = "2024-03-08"        (days_back=7, yyyy-mm-dd)
+       │                 OR "20240308"          (days_back=7, yyyymmdd)
+       │                 OR "20240308153045"    (days_back=0, yyyymmddhhMMss)
        │
        ├─ SparkApplication YAML 생성
        │    arguments:
